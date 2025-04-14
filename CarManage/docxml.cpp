@@ -22,7 +22,7 @@ void DocXML::createXML(QString filePath)
     }
     else
     {
-        //不存在才创建
+        //不存在才创建  open即创建
         bool isOK = file.open(QIODevice::WriteOnly);
         if(false == isOK)
         {

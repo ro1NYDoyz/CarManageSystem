@@ -11,6 +11,7 @@
 #define cout qDebug() << "[" << __FILE__ <<":"<<__LINE__<<"]"
 #include "histogram.h"
 #include <algorithm>
+#include <QSqlRecord>
 
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -25,7 +26,7 @@ MainWindow::MainWindow(QWidget *parent) :
     //打开数据库
     connectDB();
 
-    //初始化数据
+    //初始化厂家数据
     initData();
 
     connect(ui->comboBoxFactory, &QComboBox::currentTextChanged, this, &MainWindow::factBox);
@@ -41,7 +42,15 @@ MainWindow::MainWindow(QWidget *parent) :
     //数据统计界面设置
     connect(ui->actionCalc, &QAction::triggered, this, &MainWindow::actionCalc);
     connect(ui->comboBoxManaFac, &QComboBox::currentTextChanged, this, &MainWindow::manaFacToBrandBox);
-    connect(ui->comboBoxManaBrand,  &QComboBox::currentTextChanged, this, &MainWindow::pieNhis);
+    connect(ui->comboBoxManaBrand, &QComboBox::currentTextChanged, this, &MainWindow::pieNhis);
+
+    //入库设置
+    initTable();
+    connect(ui->toolBox, &QToolBox::currentChanged, this, &MainWindow::initTable);
+    connect(ui->btnAdd, &QPushButton::clicked, this, &MainWindow::addCar);
+    connect(ui->btnDelete, &QPushButton::clicked, this, &MainWindow::delCar);
+    connect(ui->btnSureCar, &QPushButton::clicked, model, &QSqlTableModel::submitAll);
+    connect(ui->btnWithdraw, &QPushButton::clicked, this, &MainWindow::withdrawCar);
 
 
 
@@ -261,9 +270,9 @@ void MainWindow::clickSure()
     QTextCursor cursor = ui->textEdit->textCursor();
     QTextBlockFormat centerFormat;
     centerFormat.setAlignment(Qt::AlignCenter);
-    cursor.insertBlock(centerFormat);
-    QString str = QString("————————————日销售清单————————————");
-    cursor.insertText(str);
+    cursor.insertBlock(centerFormat);//block相当于段落，每次insertBlock即换行
+    QString str = QString("————————日销售清单————————");
+    cursor.insertText(str); //在当前block插入文字，不换行
     //其余字样居左
     centerFormat.setAlignment(Qt::AlignLeft);
     cursor.insertBlock(centerFormat);
@@ -279,7 +288,7 @@ void MainWindow::clickSure()
                 .arg(tList.at(i))
                 .arg(timeList.at(i));
         ui->textEdit->append(str);
-        qDebug() << str.toUtf8().data();
+        //qDebug() << str.toUtf8().data();
     }
 
 
@@ -293,19 +302,19 @@ void MainWindow::clickSure()
 
 void MainWindow::actionCalc()
 {
-//    QSqlQuery query;
-//    int last;
-//    int sell;
+    //    QSqlQuery query;
+    //    int last;
+    //    int sell;
 
-//    QString sql = QString("Select sell, last from brand where factory = '%1' and name = '%2' ")
-//            .arg(ui->comboBoxFactory->currentText())
-//            .arg(ui->comboBoxBrand->currentText());
-//    query.exec(sql);
-//    while (query.next())
-//    {
-//        last = query.value("last").toInt();
-//        sell = query.value("sell").toInt();
-//    }
+    //    QString sql = QString("Select sell, last from brand where factory = '%1' and name = '%2' ")
+    //            .arg(ui->comboBoxFactory->currentText())
+    //            .arg(ui->comboBoxBrand->currentText());
+    //    query.exec(sql);
+    //    while (query.next())
+    //    {
+    //        last = query.value("last").toInt();
+    //        sell = query.value("sell").toInt();
+    //    }
 
 
     QSqlQueryModel *modelFactory = new QSqlQueryModel(this);
@@ -382,11 +391,55 @@ void MainWindow::pieNhis()
 
     ui->widgetP->setData(result);
 
+}
 
+void MainWindow::initTable()
+{
+    //设置模型
+    model = new QSqlTableModel(this);
+    model->setTable("brand");
+
+    //模型连接view
+    ui->tableView->setModel(model);
+    ui->tableView->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+
+
+    //显示数据
+    model->select();
+
+    //设置model的编辑模式，手动提交修改--that is--submitAll()
+    model->setEditStrategy(QSqlTableModel::OnManualSubmit);
+
+}
+
+void MainWindow::addCar()
+{
+    QSqlRecord record = model->record();//获取空记录
+    //获取行号
+    int row = model->rowCount();
+    model->insertRecord(row, record);
+}
+
+void MainWindow::delCar()
+{
+    //获取选中的模型
+    QItemSelectionModel *sModel =ui->tableView->selectionModel();
+    //取出模型中的索引
+    QModelIndexList list = sModel->selectedRows();
+    //删除所有选中的行
+    for(int i = 0; i < list.size(); i++)
+    {
+        model->removeRow( list.at(i).row() );
+    }
 
 }
 
 
+void MainWindow::withdrawCar()
+{
+    model->revertAll();
+    model->submitAll();
+}
 
 MainWindow::~MainWindow()
 {

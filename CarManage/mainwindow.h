@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QSqlTableModel>
 
 namespace Ui {
 class MainWindow;
@@ -30,12 +31,19 @@ protected:
     void actionCalc();
     void manaFacToBrandBox(const QString &fac);
     void pieNhis();
+    void initTable();
+    void addCar();
+    void delCar();
+    void withdrawCar();
+
 
 public slots:
     void spinBox(int num);
 
 private:
     Ui::MainWindow *ui;
+    QSqlTableModel* model;
+
 };
 
 #endif // MAINWINDOW_H
